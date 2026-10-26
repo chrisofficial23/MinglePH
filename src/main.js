@@ -351,7 +351,6 @@ function showPartnerTyping(isTyping) {
   indicator.textContent = `${partnerName} is typing...`;
   indicator.style.display = 'block';
 
-  // Hide the indicator if no further typing event arrives.
   state.partnerTypingTimer = setTimeout(() => {
     state.partnerTyping = false;
     indicator.textContent = '';
@@ -401,10 +400,8 @@ function stopTyping() {
   state.lastTypingSent = 0;
 }
 
-// Create the indicator early so it is ready when the chat opens.
 ensureTypingIndicator();
 
-// Show typing events while the user types in a 1-on-1 chat.
 $('#message-input').addEventListener('input', () => {
   if (state.mode !== 'one' || !state.connected) return;
 
@@ -417,7 +414,6 @@ $('#message-input').addEventListener('input', () => {
 
   const now = Date.now();
 
-  // Avoid sending a WebSocket event on every keystroke.
   if (now - state.lastTypingSent >= 800) {
     sendTypingStatus(true);
     state.lastTypingSent = now;
@@ -427,7 +423,6 @@ $('#message-input').addEventListener('input', () => {
     clearTimeout(state.typingTimer);
   }
 
-  // Automatically notify the partner when typing stops.
   state.typingTimer = setTimeout(() => {
     sendTypingStatus(false);
     state.typingTimer = null;
@@ -691,8 +686,6 @@ function handleWorkerMessage(message) {
     }
 
     case 'chat':
-      // Receiving a message means the partner is no longer
-      // actively typing that message.
       showPartnerTyping(false);
 
       appendMessage({
@@ -864,7 +857,6 @@ $('#message-form').addEventListener('submit', async event => {
       );
     }
 
-    // Stop the typing indicator once the message is sent.
     stopTyping();
     showPartnerTyping(false);
 
@@ -897,7 +889,7 @@ $('#message-form').addEventListener('submit', async event => {
 });
 
 // --------------------------------------------------
-// WEBRTC CALLS: signaling goes through Worker
+// WEBRTC CALLS: Metered TURN + Worker signaling
 // --------------------------------------------------
 
 function setCallButtons(active) {
@@ -926,11 +918,37 @@ async function getMedia(video) {
 }
 
 function createPeerConnection() {
+  // Metered TURN servers help connect devices behind
+  // different routers, NATs, and mobile networks.
+  const iceServers = [
+    {
+      urls: 'stun:stun.relay.metered.ca:80'
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:80',
+      username: '4ffe739f4a870a16875f6e08',
+      credential: 'AzXAWIhEJX18VFj0'
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+      username: '4ffe739f4a870a16875f6e08',
+      credential: 'AzXAWIhEJX18VFj0'
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443',
+      username: '4ffe739f4a870a16875f6e08',
+      credential: 'AzXAWIhEJX18VFj0'
+    },
+    {
+      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+      username: '4ffe739f4a870a16875f6e08',
+      credential: 'AzXAWIhEJX18VFj0'
+    }
+  ];
+
   const pc = new RTCPeerConnection({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' }
-    ]
+    iceServers,
+    iceCandidatePoolSize: 10
   });
 
   state.pc = pc;
@@ -962,6 +980,13 @@ function createPeerConnection() {
         candidate: event.candidate.toJSON()
       });
     }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log(
+      'MinglePH ICE connection state:',
+      pc.iceConnectionState
+    );
   };
 
   pc.onconnectionstatechange = () => {
