@@ -440,12 +440,67 @@ function resetChatView() {
   $('#chat-messages').innerHTML =
     '<div class="empty-chat"><div class="loading-heart">♡</div><b>Ready when you are</b><span>Start a chat to meet someone new.</span></div>';
 
+  const profileLine = $('#partner-profile');
+
+  if (profileLine) {
+    profileLine.remove();
+  }
+
   $('#message-input').disabled = true;
   $('#send-message').disabled = true;
   $('#chat-title').textContent = 'Chat';
   $('#chat-subtitle').textContent =
     'Your conversation will appear here.';
   $('#chat-status').innerHTML = '<i></i> Not connected';
+}
+
+function showPartnerProfile() {
+  let line = $('#partner-profile');
+
+  if (!line) {
+    line = document.createElement('div');
+    line.id = 'partner-profile';
+    line.className = 'partner-profile';
+
+    const title = $('#chat-title');
+
+    if (title) {
+      title.insertAdjacentElement('afterend', line);
+    }
+  }
+
+  const partner = state.partner || {};
+  const details = [];
+
+  const name = typeof partner.nickname === 'string'
+    ? partner.nickname.trim()
+    : '';
+
+  const gender = typeof partner.gender === 'string'
+    ? partner.gender.trim()
+    : '';
+
+  const location = typeof partner.location === 'string'
+    ? partner.location.trim()
+    : '';
+
+  if (name && !/^Mingle\d{4}$/i.test(name)) {
+    details.push(name);
+  }
+
+  if (gender) {
+    details.push(gender);
+  }
+
+  if (
+    location &&
+    location.toLowerCase() !== 'any city / philippines'
+  ) {
+    details.push(location);
+  }
+
+  line.textContent = details.join(' · ');
+  line.classList.toggle('hidden', details.length === 0);
 }
 
 function appendMessage(data, mine) {
@@ -680,6 +735,8 @@ function handleWorkerMessage(message) {
         'You’re connected · Say kumusta!',
         'one'
       );
+
+      showPartnerProfile();
 
       updateConnectionStatus('Connected');
       break;
