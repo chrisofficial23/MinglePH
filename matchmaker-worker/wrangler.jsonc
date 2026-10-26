@@ -1,0 +1,21 @@
+
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mingleph-matchmaker",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-26",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MATCHMAKER",
+        "class_name": "MatchmakerRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["MatchmakerRoom"]
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#120b18" />
+  <meta name="description" content="MinglePH — random text, voice, and video conversations for Filipinos." />
+  <title>MinglePH — Random Online</title>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <a class="brand" href="#top"><span class="brand-mark">♡</span><span><strong>MinglePH</strong><small>RANDOM ONLINE</small></span></a>
+    <span class="online-pill"><i></i> FOR FILIPINOS</span>
+  </header>
+  <main class="shell" id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <div class="eyebrow"><span>✦</span> MADE FOR FILIPINOS</div>
+        <h1>Single ka? Your mingling<br>era <em>starts here. ♡</em></h1>
+        <p>Single ka ba? Halika, mag-MinglePH ka na! Baka stranger mo ngayon, ka-talking stage mo na bukas. AYIEEE! 😭💗</p>
+        <div class="hero-notes"><span>♡ MinglePH by chris</span><span>•</span><span>Tagalog + Bisaya</span></div>
+      </div>
+      <div class="hero-art" aria-hidden="true"><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="bubble bubble-a">kumusta? <span>♡</span></div><div class="bubble bubble-b">tara, chika! ✦</div><div class="heart-orb">♡</div><div class="tiny-star star-one">✦</div><div class="tiny-star star-two">✧</div></div>
+    </section>
+
+    <section class="main-grid">
+      <div class="panel setup-panel">
+        <div class="panel-heading"><div><span class="step-label">LET'S GET YOU CONNECTED</span><h2>Set your vibe</h2></div><span class="heading-heart">♡</span></div>
+        <div class="mode-label">CHOOSE CHAT MODE</div>
+        <div class="mode-switch" role="group" aria-label="Chat mode">
+          <button class="mode-button active" data-mode="one" type="button"><span>♙</span><b>1-on-1</b><small>Meet someone new</small></button>
+          <button class="mode-button" data-mode="group" type="button"><span>♧</span><b>Group Chat</b><small>Chika with everyone</small></button>
+        </div>
+        <label class="field-label" for="nickname">Temporary username <span>OPTIONAL</span></label>
+        <input id="nickname" class="text-input" maxlength="24" placeholder="e.g. BisaLog23" autocomplete="off">
+        <div class="field-row">
+          <div class="field"><label class="field-label" for="gender">Gender <span>OPTIONAL</span></label><select id="gender" class="text-input"><option value="any">Any</option><option value="Male">👦 Male</option><option value="Female">👧 Female</option><option value="LGBTQ+">🏳️‍🌈 LGBTQ+</option></select></div>
+          <div class="field"><label class="field-label" for="location">Location <span>OPTIONAL</span></label><select id="location" class="text-input"><option value="Any City / Philippines">🇵🇭 Any City / Philippines</option></select></div>
+        </div>
+        <div class="field-label topics-title">Optional topics <span id="topic-count">0/5 ADDED</span></div>
+        <div class="topic-entry"><input id="topic-input" class="topic-input" maxlength="30" placeholder="# e.g. gaming, music, basin unsa..."><button id="add-topic" class="add-topic" type="button" aria-label="Add topic">+</button></div>
+        <div id="topic-list" class="topic-list"><span class="topic-hint">Add up to 5 topics to help find your vibe.</span></div>
+        <label class="respect-check"><input id="respect" type="checkbox" checked><span>I’ll be respectful and follow the community rules.</span></label>
+        <button id="start-chat" class="primary-button" type="button"><span>✦</span> Start Random Chat <span class="button-arrow">→</span></button>
+        <p class="fine-print">Don't share private information.</p>
+        <div id="setup-status" class="status-line" role="status"></div>
+      </div>
+      <aside class="panel safety-panel">
+        <div class="safety-icon">♡</div><span class="step-label">GOOD VIBES ONLY</span><h2>Anonymous.<br><em>Not careless.</em></h2>
+        <p>Meet new people while keeping your personal details to yourself.</p>
+        <div class="safety-list"><div><span class="check-icon">✓</span><span><b>Stay anonymous</b><small>Your nickname is temporary.</small></span></div><div><span class="check-icon">✓</span><span><b>Be respectful</b><small>No harassment or unwanted content.</small></span></div><div><span class="check-icon">✓</span><span><b>You’re in control</b><small>Mute, turn off video, report, or leave.</small></span></div></div>
+        <div class="community-note"><span>✧</span><p><b>Para sa Pinoy.</b><br>Pwede Tagalog at Bisaya. Be kind, be chill.</p></div>
+      </aside>
+    </section>
+
+    <section id="chat-panel" class="panel chat-panel hidden" aria-live="polite">
+      <div class="chat-header"><div class="chat-avatar">♡</div><div class="chat-title"><b id="chat-title">Chat</b><small id="chat-subtitle">Your conversation will appear here.</small></div><span id="chat-status" class="chat-status"><i></i> Not connected</span></div>
+      <div id="video-stage" class="video-stage hidden"><div class="video-tile remote-tile"><video id="remote-video" autoplay playsinline></video><span id="remote-video-label">Your chat partner</span></div><div class="video-tile local-tile"><video id="local-video" autoplay playsinline muted></video><span>You</span></div></div>
+      <div id="call-status" class="call-status hidden" role="status"></div>
+      <div id="chat-messages" class="chat-messages"><div class="empty-chat"><div class="loading-heart">♡</div><b>Ready when you are</b><span>Start a chat to meet someone new.</span></div></div>
+      <form id="message-form" class="message-form"><input id="message-input" maxlength="1000" autocomplete="off" placeholder="Type a message..." disabled><button id="send-message" type="submit" disabled>Send ↗</button></form>
+      <div class="call-controls"><span class="call-label">CALL CONTROLS</span><button id="voice-call" class="call-button" type="button" disabled><span>🎙</span> Voice call</button><button id="video-call" class="call-button video-call-button" type="button" disabled><span>▣</span> Video call</button><button id="toggle-mic" class="call-button small-call" type="button" disabled title="Mute or unmute microphone">Mic on</button><button id="toggle-camera" class="call-button small-call" type="button" disabled title="Turn camera on or off">Camera off</button><button id="end-call" class="call-button end-call" type="button" disabled>End call</button></div>
+      <div class="chat-actions"><button id="next-chat" class="secondary-button" type="button">↻ Find next</button><button id="report-chat" class="text-button" type="button">⚑ Report</button><button id="leave-chat" class="text-button" type="button">✕ Leave chat</button></div>
+      <p class="fine-print">Calls work in 1-on-1 mode. Allow camera/mic access when your browser asks. Use HTTPS in production.</p>
+    </section>
+  </main>
+  <footer class="footer"><div><span class="footer-heart">♡</span><b>MinglePH</b><span class="footer-muted">© 2026 · Made for Filipino conversations</span></div><a class="discord-link" href="https://discord.gg/pPt6q6tas" target="_blank" rel="noopener noreferrer"><span class="discord-icon">◉</span> Join our Discord <span>↗</span></a></footer>
+</div>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
