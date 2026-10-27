@@ -100,17 +100,26 @@ for (const city of cities) {
 // --------------------------------------------------
 
 const currentUrl = new URL(window.location.href);
-const isChatTab = currentUrl.searchParams.get('page') === 'chat';
+let isChatTab = false;
 
 function returnToHome() {
-  const url = new URL(window.location.href);
+  isChatTab = false;
 
+  const url = new URL(window.location.href);
   url.searchParams.delete('page');
   url.searchParams.delete('profile');
 
-  window.location.replace(
+  window.history.replaceState(
+    { minglePage: 'home' },
+    '',
     url.pathname + url.search + url.hash
   );
+
+  $('#chat-panel').classList.add('hidden');
+  $('#home-page')?.classList.remove('hidden');
+
+  resetChatView();
+  setStatus('');
 }
 
 function loadChatTabProfile() {
@@ -170,8 +179,6 @@ function loadChatTabProfile() {
     setStatus('Could not load your profile. Please start again.', 'error');
   }
 }
-
-loadChatTabProfile();
 
 function setStatus(message, type = '') {
   const el = $('#setup-status');
@@ -1512,6 +1519,14 @@ $('#next-chat').addEventListener('click', async () => {
   await leaveChat(true);
 });
 
+// Return to the home page when browser Back is pressed.
+window.addEventListener('popstate', async () => {
+  if (!isChatTab) return;
+
+  await leaveChat(false);
+  returnToHome();
+});
+
 
 // --------------------------------------------------
 // START CHAT
@@ -1530,33 +1545,21 @@ $('#start-chat').addEventListener('click', async () => {
 
   state.nickname = nickname();
 
-  // From the home page, open a separate chat tab.
-  if (!isChatTab) {
-    const profile = {
-      nickname: state.nickname,
-      gender: $('#gender').value,
-      location: $('#location').value || 'Any City / Philippines',
-      topics: [...state.topics],
-      mode: state.mode
-    };
+  isChatTab = true;
 
-    const url = new URL(window.location.href);
-    url.searchParams.set('page', 'chat');
-    url.searchParams.set('profile', JSON.stringify(profile));
+  const url = new URL(window.location.href);
+  url.searchParams.delete('page');
+  url.searchParams.delete('profile');
 
-    const newTab = window.open(url.toString(), '_blank');
+  window.history.pushState(
+    { minglePage: 'chat' },
+    '',
+    url.pathname + url.search + url.hash
+  );
 
-    if (!newTab) {
-      setStatus(
-        'Your browser blocked the new tab. Allow pop-ups for this website and try again.',
-        'error'
-      );
-    }
+  $('#home-page')?.classList.add('hidden');
+  $('#chat-panel').classList.remove('hidden');
 
-    return;
-  }
-
-  // Existing matching behavior for the chat tab.
   await startChatSession();
 });
 
@@ -1631,13 +1634,6 @@ $('#report-chat').addEventListener('click', async () => {
     );
   }
 });
-
-// Automatically start matching when the new chat tab opens.
-if (isChatTab) {
-  if (currentUrl.searchParams.has('profile')) {
-    startChatSession();
-  }
-}
 
 // --------------------------------------------------
 // PAGE CLEANUP
