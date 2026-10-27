@@ -1010,7 +1010,6 @@ function createPeerConnection() {
 
   state.pc = pc;
   state.remoteStream = new MediaStream();
-  state.pendingCandidates = [];
   state.remoteDescriptionSet = false;
 
   $('#remote-video').srcObject = state.remoteStream;
