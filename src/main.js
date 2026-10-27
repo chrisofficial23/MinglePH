@@ -95,6 +95,84 @@ for (const city of cities) {
   $('#location').append(option);
 }
 
+// --------------------------------------------------
+// CHAT TAB / PROFILE TRANSFER
+// --------------------------------------------------
+
+const currentUrl = new URL(window.location.href);
+const isChatTab = currentUrl.searchParams.get('page') === 'chat';
+
+function returnToHome() {
+  const url = new URL(window.location.href);
+
+  url.searchParams.delete('page');
+  url.searchParams.delete('profile');
+
+  window.location.replace(
+    url.pathname + url.search + url.hash
+  );
+}
+
+function loadChatTabProfile() {
+  if (!isChatTab) return;
+
+  try {
+    const profileText = currentUrl.searchParams.get('profile');
+
+    if (!profileText) {
+      setStatus('Profile information is missing. Please start again.', 'error');
+      return;
+    }
+
+    const profile = JSON.parse(profileText);
+
+    if (typeof profile.nickname === 'string') {
+      $('#nickname').value = profile.nickname;
+    }
+
+    if (typeof profile.gender === 'string') {
+      $('#gender').value = profile.gender;
+    }
+
+    if (typeof profile.location === 'string') {
+      const locationExists = [...$('#location').options]
+        .some(option => option.value === profile.location);
+
+      if (locationExists) {
+        $('#location').value = profile.location;
+      }
+    }
+
+    if (Array.isArray(profile.topics)) {
+      state.topics = profile.topics
+        .filter(topic => typeof topic === 'string')
+        .slice(0, 5);
+
+      renderTopics();
+    }
+
+    if (profile.mode === 'group' || profile.mode === 'one') {
+      state.mode = profile.mode;
+
+      document.querySelectorAll('.mode-button').forEach(button => {
+        button.classList.toggle(
+          'active',
+          button.dataset.mode === state.mode
+        );
+      });
+    }
+
+    // Hide the home page and show the chat interface.
+    $('#home-page')?.classList.add('hidden');
+    $('#chat-panel').classList.remove('hidden');
+  } catch (error) {
+    console.error('Could not load chat profile:', error);
+    setStatus('Could not load your profile. Please start again.', 'error');
+  }
+}
+
+loadChatTabProfile();
+
 function setStatus(message, type = '') {
   const el = $('#setup-status');
   el.textContent = message;
@@ -1421,19 +1499,24 @@ async function startSelectedChat() {
   }
 }
 
-$('#leave-chat').addEventListener(
-  'click',
-  () => leaveChat(false)
-);
 
-$('#next-chat').addEventListener(
-  'click',
-  () => leaveChat(true)
-);
+$('#leave-chat').addEventListener('click', async () => {
+  await leaveChat(false);
+
+  if (isChatTab) {
+    returnToHome();
+  }
+});
+
+$('#next-chat').addEventListener('click', async () => {
+  await leaveChat(true);
+});
+
 
 // --------------------------------------------------
 // START CHAT
 // --------------------------------------------------
+
 
 $('#start-chat').addEventListener('click', async () => {
   if (!$('#respect').checked) {
@@ -1445,12 +1528,51 @@ $('#start-chat').addEventListener('click', async () => {
 
   if (state.starting) return;
 
-  state.starting = true;
-  $('#start-chat').disabled = true;
-  $('#start-chat').style.opacity = '.65';
-
   state.nickname = nickname();
 
+  // From the home page, open a separate chat tab.
+  if (!isChatTab) {
+    const profile = {
+      nickname: state.nickname,
+      gender: $('#gender').value,
+      location: $('#location').value || 'Any City / Philippines',
+      topics: [...state.topics],
+      mode: state.mode
+    };
+
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', 'chat');
+    url.searchParams.set('profile', JSON.stringify(profile));
+
+    const newTab = window.open(url.toString(), '_blank');
+
+    if (!newTab) {
+      setStatus(
+        'Your browser blocked the new tab. Allow pop-ups for this website and try again.',
+        'error'
+      );
+    }
+
+    return;
+  }
+
+  // Existing matching behavior for the chat tab.
+  await startChatSession();
+});
+
+async function startChatSession() {
+  if (state.starting) return;
+
+  state.starting = true;
+
+  const startButton = $('#start-chat');
+
+  if (startButton) {
+    startButton.disabled = true;
+    startButton.style.opacity = '.65';
+  }
+
+  state.nickname = nickname();
   setStatus('Connecting...');
 
   try {
@@ -1466,10 +1588,13 @@ $('#start-chat').addEventListener('click', async () => {
     );
   } finally {
     state.starting = false;
-    $('#start-chat').disabled = false;
-    $('#start-chat').style.opacity = '';
+
+    if (startButton) {
+      startButton.disabled = false;
+      startButton.style.opacity = '';
+    }
   }
-});
+}
 
 // --------------------------------------------------
 // REPORT SYSTEM: Firebase Firestore
@@ -1506,6 +1631,13 @@ $('#report-chat').addEventListener('click', async () => {
     );
   }
 });
+
+// Automatically start matching when the new chat tab opens.
+if (isChatTab) {
+  if (currentUrl.searchParams.has('profile')) {
+    startChatSession();
+  }
+}
 
 // --------------------------------------------------
 // PAGE CLEANUP
