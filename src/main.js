@@ -1,4 +1,3 @@
-
 import { initializeApp } from 'firebase/app';
 import {
   getAuth,
@@ -651,7 +650,6 @@ function watchMessages() {
 
 function activateChat(title, subtitle, mode) {
   state.mode = mode;
-  showChat();
 
   $('#chat-title').textContent = title;
   $('#chat-subtitle').textContent = subtitle;
@@ -706,6 +704,157 @@ async function startGroup() {
     'Group room · Anyone with matching topics can join',
     'group'
   );
+}
+
+
+/* --------------------------------------------------
+   FINDING SCREEN
+-------------------------------------------------- */
+
+let findingStartedAt = 0;
+let findingTimerInterval = null;
+let findingActive = false;
+
+function formatFindingTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
+function stopFindingTimer() {
+  if (findingTimerInterval) {
+    clearInterval(findingTimerInterval);
+    findingTimerInterval = null;
+  }
+
+  findingActive = false;
+}
+
+function renderFindingScreen() {
+  stopFindingScreen();
+
+  findingStartedAt = Date.now();
+  findingActive = true;
+
+  const screen = document.createElement('section');
+  screen.id = 'finding-screen';
+  screen.setAttribute('aria-live', 'polite');
+
+  const content = document.createElement('div');
+  content.className = 'finding-content';
+
+  const heart = document.createElement('div');
+  heart.className = 'finding-heart';
+  heart.textContent = '♥';
+  heart.setAttribute('aria-hidden', 'true');
+
+  const title = document.createElement('h1');
+  title.textContent = 'Finding your vibe';
+
+  const description = document.createElement('p');
+  description.className = 'finding-description';
+  description.textContent =
+    'Looking for someone to talk to. Keep MinglePH open while we search.';
+
+  const dots = document.createElement('div');
+  dots.className = 'finding-dots';
+  dots.setAttribute('aria-hidden', 'true');
+
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement('span');
+    dot.textContent = '●';
+    dots.append(dot);
+  }
+
+  const topics = document.createElement('div');
+  topics.className = 'finding-topics';
+
+  const selectedTopics = state.topics.length
+    ? state.topics
+    : ['General'];
+
+  selectedTopics.forEach(topic => {
+    const chip = document.createElement('span');
+    chip.className = 'finding-topic';
+    chip.textContent = `#${topic}`;
+    topics.append(chip);
+  });
+
+  const timer = document.createElement('p');
+  timer.className = 'finding-timer';
+  timer.id = 'finding-timer';
+  timer.textContent = 'Search time: 00:00';
+
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'finding-cancel';
+  cancel.id = 'cancel-finding';
+  cancel.textContent = 'Cancel Finding';
+  cancel.addEventListener('click', cancelFinding);
+
+  content.append(heart, title, description, dots, topics, timer, cancel);
+  screen.append(content);
+  document.body.append(screen);
+
+  findingTimerInterval = setInterval(() => {
+    if (!findingActive) return;
+
+    const elapsed = Math.floor(
+      (Date.now() - findingStartedAt) / 1000
+    );
+
+    const timerElement = document.getElementById('finding-timer');
+
+    if (timerElement) {
+      timerElement.textContent =
+        `Search time: ${formatFindingTime(elapsed)}`;
+    }
+  }, 1000);
+}
+
+async function cancelFinding() {
+  if (!findingActive) return;
+
+  const cancelButton = document.querySelector(
+    '#finding-screen .finding-cancel'
+  );
+
+  if (cancelButton) {
+    cancelButton.disabled = true;
+    cancelButton.textContent = 'Cancelling...';
+  }
+
+  // Remove the finding screen immediately.
+  stopFindingScreen();
+
+  try {
+    closeSocket(true);
+  } finally {
+    state.connected = false;
+    state.partner = null;
+    state.roomId = null;
+    state.queueId = null;
+
+    resetTypingIndicator();
+    resetChatView();
+
+    if (isChatTab) {
+      returnToHome();
+    } else {
+      setStatus('Finding cancelled.');
+    }
+  }
+}
+
+function stopFindingScreen() {
+  stopFindingTimer();
+
+  const screen = document.getElementById('finding-screen');
+
+  if (screen) {
+    screen.remove();
+  }
 }
 
 // --------------------------------------------------
@@ -787,24 +936,30 @@ function handleWorkerMessage(message) {
       });
       break;
 
-    case 'waiting':
-      resetTypingIndicator();
+case 'waiting':
+  resetTypingIndicator();
 
-      updateConnectionStatus('Searching for a partner');
+  updateConnectionStatus('Searching for a partner');
 
-      $('#chat-title').textContent = 'Finding someone...';
-      $('#chat-subtitle').textContent =
-        'Keep this page open while we match you.';
+  $('#chat-title').textContent = 'Finding someone...';
+  $('#chat-subtitle').textContent =
+    'Searching for someone with your vibe.';
 
-      $('#chat-messages').innerHTML =
-        '<div class="empty-chat"><div class="loading-heart">♡</div><b>Looking for your chat partner...</b><span>Matching may take a moment when few people are online.</span></div>';
+  $('#message-input').disabled = true;
+  $('#send-message').disabled = true;
 
-      $('#message-input').disabled = true;
-      $('#send-message').disabled = true;
-      break;
+  // Keep the existing Finding Screen visible.
+  if (!document.getElementById('finding-screen')) {
+    renderFindingScreen();
+  }
+  break;
 
     case 'matched': {
-      resetTypingIndicator();
+  stopFindingScreen();
+
+  $('#chat-panel').classList.remove('hidden');
+
+  resetTypingIndicator();
 
       state.connected = true;
       state.roomId = message.roomId || null;
@@ -861,23 +1016,30 @@ function handleWorkerMessage(message) {
       break;
 
     case 'partner-left':
+      if (state.intentionalClose || state.leaving) break;
+
+      if (state.mode !== 'one') break;
+
       state.connected = false;
 
       resetTypingIndicator();
       cleanupCall(false);
 
-      updateConnectionStatus('Partner disconnected');
+      updateConnectionStatus('Partner left · Finding someone new');
 
-      $('#chat-title').textContent = 'Partner disconnected';
+      $('#chat-title').textContent = 'Finding someone new...';
       $('#chat-subtitle').textContent =
-        'Select Next to look for someone else.';
+        'Your previous partner left. Searching again automatically.';
 
       $('#message-input').disabled = true;
       $('#send-message').disabled = true;
 
-      setCallStatus(
-        'Your chat partner left the conversation.'
-      );
+      setCallStatus('Your partner left. Finding a new match...');
+
+      void leaveChat(true).catch(error => {
+        console.error('Auto-find after partner left failed:', error);
+        setCallStatus('Could not find a new match. Please try Next Chat.');
+      });
       break;
 
     case 'error':
@@ -903,8 +1065,6 @@ async function startOneToOne() {
   state.intentionalClose = false;
 
   resetTypingIndicator();
-
-  showChat();
 
   $('#chat-title').textContent = 'Connecting...';
   $('#chat-subtitle').textContent =
@@ -951,25 +1111,51 @@ async function startOneToOne() {
       }
     };
 
+    
     socket.onclose = () => {
       clearTimeout(timeout);
 
-      if (state.socket === socket) {
-        state.socket = null;
-        state.connected = false;
+      if (state.socket !== socket) return;
 
-        resetTypingIndicator();
+      const wasConnected = state.connected;
+      const shouldAutoFind =
+        wasConnected &&
+        !state.intentionalClose &&
+        !state.leaving &&
+        state.mode === 'one';
 
-        if (!state.intentionalClose) {
-          updateConnectionStatus('Disconnected');
+      state.socket = null;
+      state.connected = false;
 
-          $('#message-input').disabled = true;
-          $('#send-message').disabled = true;
+      resetTypingIndicator();
 
-          setCallStatus(
-            'Connection to the matching server was lost.'
-          );
-        }
+      if (shouldAutoFind) {
+        updateConnectionStatus('Disconnected · Finding someone new');
+
+        $('#chat-title').textContent = 'Finding someone new...';
+        $('#chat-subtitle').textContent =
+          'Connection lost. Searching for another partner.';
+
+        $('#message-input').disabled = true;
+        $('#send-message').disabled = true;
+
+        void leaveChat(true).catch(error => {
+          console.error('Auto-find after disconnect failed:', error);
+          setCallStatus('Could not reconnect. Please try Next Chat.');
+        });
+
+        return;
+      }
+
+            if (!state.intentionalClose) {
+        updateConnectionStatus('Disconnected');
+
+        $('#message-input').disabled = true;
+        $('#send-message').disabled = true;
+
+        setCallStatus(
+          'Connection to the matching server was lost.'
+        );
       }
     };
   });
@@ -1455,6 +1641,8 @@ async function leaveChat(requeue = false) {
 
   const previousMode = state.mode;
 
+  stopFindingScreen();
+
   try {
     stopTyping();
     resetTypingIndicator();
@@ -1544,7 +1732,6 @@ $('#start-chat').addEventListener('click', async () => {
   if (state.starting) return;
 
   state.nickname = nickname();
-
   isChatTab = true;
 
   const url = new URL(window.location.href);
@@ -1557,8 +1744,16 @@ $('#start-chat').addEventListener('click', async () => {
     url.pathname + url.search + url.hash
   );
 
-  $('#home-page')?.classList.add('hidden');
-  $('#chat-panel').classList.remove('hidden');
+  if (state.mode === 'one') {
+    $('#chat-panel').classList.add('hidden');
+    $('#home-page')?.classList.add('hidden');
+
+    // Show Finding Screen immediately.
+    renderFindingScreen();
+  } else {
+    $('#home-page')?.classList.add('hidden');
+    $('#chat-panel').classList.remove('hidden');
+  }
 
   await startChatSession();
 });
