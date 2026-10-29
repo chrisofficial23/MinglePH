@@ -1275,9 +1275,10 @@ function createPeerConnection() {
   ];
 
   const pc = new RTCPeerConnection({
-    iceServers,
-    iceCandidatePoolSize: 10
-  });
+  iceServers,
+  iceCandidatePoolSize: 10,
+  iceTransportPolicy: 'relay'
+});
 
   state.pc = pc;
   state.remoteStream = new MediaStream();
