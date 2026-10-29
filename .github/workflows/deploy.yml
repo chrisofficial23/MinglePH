@@ -32,7 +32,7 @@ jobs:
         run: npm ci
 
       - name: Build
-  run: npm run build -- --mode github-pages
+        run: npm run build -- --mode github-pages
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
